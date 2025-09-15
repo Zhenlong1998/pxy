@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分手模拟器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen active">
+        <div class="container">
+            <h1>小游戏 要不要继续?</h1>
+            <p class="subtitle">通过这5个问题来决定我们的关系。</p>
+            <div class="button-container">
+                <button class="btn primary-btn" onclick="startQuiz()" aria-label="Start the quiz">开始</button>
+                <button class="btn no-btn evasive-start-btn" onclick="showMessage('呵呵~ 😏 你以为点得到？')" aria-label="Try to catch the No button">拒绝</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Questions Screen -->
+    <div id="questionsScreen" class="screen">
+        <div class="container">
+            <!-- Progress Header -->
+            <div class="progress-header">
+                <h2 id="progressText" aria-live="polite">Question 1 of 5</h2>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Question Content -->
+            <div class="question-content">
+                <h3 id="questionText" class="question-text">Loading question...</h3>
+                
+                <!-- Balance/Seesaw Visual -->
+                <div class="balance-container" aria-hidden="true">
+                    <div class="balance-pivot"></div>
+                    <div id="balanceBar" class="balance-bar">
+                        <div class="balance-weight left">好</div>
+                        <div class="balance-weight right">拒绝</div>
+                    </div>
+                </div>
+
+                <!-- Answer Buttons -->
+                <div class="button-container">
+                    <button class="btn okay-btn" onclick="selectAnswer('okay')" aria-label="Choose Okay">好</button>
+                    <button class="btn no-btn" onclick="selectAnswer('no')" aria-label="Choose No">拒绝</button>
+                </div>
+
+                <!-- Navigation -->
+                <div class="nav-container">
+                    <button id="backBtn" class="btn secondary-btn" onclick="previousQuestion()" aria-label="Go back to previous question">← Back</button>
+                    <button id="nextBtn" class="btn secondary-btn" onclick="nextQuestion()" disabled aria-label="Go to next question">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="resultScreen" class="screen">
+        <div class="container">
+            <h1 id="resultHeadline" class="result-headline" aria-live="assertive">你的结果</h1>
+            
+            <!-- Result Image (conditionally shown) -->
+            <div id="resultImageContainer" class="result-image-container" style="display: none;">
+                <img id="resultImage" src="./assets/hope.jpg" alt="Hope and new beginnings" class="result-image">
+            </div>
+            
+            <!-- Summary Text -->
+            <p id="resultSummary" class="result-summary" aria-live="polite">正在计算你的结果...</p>
+            
+            <!-- Action Buttons -->
+            <div class="button-container">
+                <button class="btn primary-btn" onclick="restartQuiz()" aria-label="Restart the quiz">重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound Toggle -->
+    <button id="soundToggle" class="sound-toggle" onclick="toggleSound()" aria-label="Toggle background music" title="Music: Off">
+        <span id="soundIcon">🔇</span>
+    </button>
+
+    <!-- Message Overlay -->
+    <div id="messageOverlay" class="message-overlay" onclick="hideMessage()">
+        <div class="message-content" onclick="event.stopPropagation()">
+            <p id="messageText">Message text</p>
+            <button class="btn secondary-btn" onclick="hideMessage()">确定</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
