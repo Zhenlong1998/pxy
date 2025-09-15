@@ -14,17 +14,303 @@ let backgroundMusic = null;
 // === GAME STATE ===
 let currentQuestionIndex = 0;
 let answers = []; // Store "okay" or "no" for each question
-let soundEnabled = false;
+let soundEnabled = true; // Enable by default for autoplay
 let balanceTilt = 0; // Track the balance tilt
+
+// === PERFORMANCE OPTIMIZATION ===
+let activeTimeouts = new Set();
+let activeIntervals = new Set();
+let activeAnimationFrames = new Set();
+
+// Enhanced timeout with tracking
+function setTrackedTimeout(callback, delay) {
+    const timeoutId = setTimeout(() => {
+        activeTimeouts.delete(timeoutId);
+        callback();
+    }, delay);
+    activeTimeouts.add(timeoutId);
+    return timeoutId;
+}
+
+// === INTERACTIVE SNOWFLAKES ===
+function initializeInteractiveSnowflakes() {
+    const snowflakes = document.querySelectorAll('.snowflake');
+    
+    snowflakes.forEach((snowflake, index) => {
+        // Add click/touch event listener
+        snowflake.addEventListener('click', (e) => {
+            handleSnowflakeClick(snowflake, e);
+        });
+        
+        // Add touch event for mobile
+        snowflake.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleSnowflakeClick(snowflake, e);
+        });
+    });
+}
+
+function handleSnowflakeClick(snowflake, event) {
+    // Play sound if enabled
+    playSound();
+    
+    // Get click position for effects
+    const rect = snowflake.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    
+    // Random reaction type
+    const reactions = ['explode', 'multiply', 'bounce', 'colorChange'];
+    const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+    
+    // Create ripple effect at click position
+    createRippleEffect(x, y);
+    
+    // Apply reaction
+    switch(reaction) {
+        case 'explode':
+            explodeSnowflake(snowflake);
+            break;
+        case 'multiply':
+            multiplySnowflake(snowflake);
+            break;
+        case 'bounce':
+            bounceSnowflake(snowflake);
+            break;
+        case 'colorChange':
+            changeSnowflakeColor(snowflake);
+            break;
+    }
+}
+
+function explodeSnowflake(snowflake) {
+    snowflake.classList.add('clicked');
+    
+    
+    
+    // Remove snowflake after animation
+    setTimeout(() => {
+        if (snowflake.parentNode) {
+            snowflake.parentNode.removeChild(snowflake);
+            
+            // Respawn after 3 seconds
+            setTimeout(() => {
+                respawnSnowflake();
+            }, 3000);
+        }
+    }, 800);
+}
+
+function multiplySnowflake(snowflake) {
+    snowflake.classList.add('multiply');
+    
+    // Create 2-3 new snowflakes nearby
+    const numNew = Math.floor(Math.random() * 2) + 2;
+    for (let i = 0; i < numNew; i++) {
+        setTimeout(() => {
+            createTemporarySnowflake(snowflake);
+        }, i * 200);
+    }
+    
+    // Remove multiply class
+    setTimeout(() => {
+        snowflake.classList.remove('multiply');
+    }, 1000);
+}
+
+function bounceSnowflake(snowflake) {
+    const originalAnimation = snowflake.style.animation;
+    snowflake.style.animation = 'snowflakeBounce 0.6s ease-out';
+    
+    setTimeout(() => {
+        snowflake.style.animation = originalAnimation;
+    }, 600);
+}
+
+function changeSnowflakeColor(snowflake) {
+    const colors = [
+        'rgba(255, 192, 203, 0.9)', // Pink
+        'rgba(173, 216, 230, 0.9)', // Light blue
+        'rgba(255, 215, 0, 0.9)',   // Gold
+        'rgba(152, 251, 152, 0.9)', // Light green
+        'rgba(255, 160, 122, 0.9)'  // Light coral
+    ];
+    
+    const originalColor = snowflake.style.color;
+    const newColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    snowflake.style.color = newColor;
+    snowflake.style.textShadow = `0 0 10px ${newColor}`;
+    
+    // Revert after 2 seconds
+    setTimeout(() => {
+        snowflake.style.color = originalColor;
+        snowflake.style.textShadow = '';
+    }, 2000);
+}
+
+function createRippleEffect(x, y) {
+    const ripple = document.createElement('div');
+    ripple.style.cssText = `
+        position: fixed;
+        left: ${x - 25}px;
+        top: ${y - 25}px;
+        width: 50px;
+        height: 50px;
+        border: 2px solid rgba(135, 206, 250, 0.6);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 1000;
+        animation: rippleExpand 0.6s ease-out forwards;
+    `;
+    
+    document.body.appendChild(ripple);
+    
+    setTimeout(() => {
+        if (ripple.parentNode) {
+            ripple.parentNode.removeChild(ripple);
+        }
+    }, 600);
+}
+
+function createSnowflakeBurst(sourceSnowflake) {
+    const rect = sourceSnowflake.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    for (let i = 0; i < 5; i++) {
+        const miniFlake = document.createElement('div');
+        miniFlake.textContent = '❄';
+        miniFlake.style.cssText = `
+            position: fixed;
+            left: ${centerX}px;
+            top: ${centerY}px;
+            color: rgba(255, 215, 0, 0.8);
+            font-size: 10px;
+            pointer-events: none;
+            z-index: 999;
+            animation: burstOut${i} 1s ease-out forwards;
+        `;
+        
+        document.body.appendChild(miniFlake);
+        
+        setTimeout(() => {
+            if (miniFlake.parentNode) {
+                miniFlake.parentNode.removeChild(miniFlake);
+            }
+        }, 1000);
+    }
+}
+
+function createTemporarySnowflake(sourceSnowflake) {
+    const rect = sourceSnowflake.getBoundingClientRect();
+    const newFlake = document.createElement('div');
+    newFlake.textContent = '❄';
+    newFlake.classList.add('snowflake');
+    
+    const offsetX = (Math.random() - 0.5) * 100;
+    const offsetY = (Math.random() - 0.5) * 50;
+    
+    newFlake.style.cssText = `
+        position: fixed;
+        left: ${rect.left + offsetX}px;
+        top: ${rect.top + offsetY}px;
+        color: rgba(173, 216, 230, 0.8);
+        font-size: ${Math.random() * 8 + 10}px;
+        animation: fall linear ${Math.random() * 3 + 4}s;
+    `;
+    
+    document.body.appendChild(newFlake);
+    
+    // Make it interactive too
+    newFlake.addEventListener('click', (e) => {
+        handleSnowflakeClick(newFlake, e);
+    });
+    
+    // Remove after falling
+    setTimeout(() => {
+        if (newFlake.parentNode) {
+            newFlake.parentNode.removeChild(newFlake);
+        }
+    }, 7000);
+}
+
+function respawnSnowflake() {
+    const snowContainer = document.querySelector('.snow-container');
+    if (!snowContainer) return;
+    
+    const newFlake = document.createElement('div');
+    newFlake.textContent = '❄';
+    newFlake.classList.add('snowflake');
+    
+    newFlake.style.cssText = `
+        left: ${Math.random() * 90 + 5}%;
+        font-size: ${Math.random() * 8 + 12}px;
+        animation-duration: ${Math.random() * 4 + 6}s;
+        animation-delay: 0s;
+        top: -200px;
+    `;
+    
+    snowContainer.appendChild(newFlake);
+    
+    // Make it interactive
+    newFlake.addEventListener('click', (e) => {
+        handleSnowflakeClick(newFlake, e);
+    });
+}
+
+// Enhanced interval with tracking
+function setTrackedInterval(callback, delay) {
+    const intervalId = setInterval(callback, delay);
+    activeIntervals.add(intervalId);
+    return intervalId;
+}
+
+// Enhanced requestAnimationFrame with tracking
+function setTrackedAnimationFrame(callback) {
+    const frameId = requestAnimationFrame(() => {
+        activeAnimationFrames.delete(frameId);
+        callback();
+    });
+    activeAnimationFrames.add(frameId);
+    return frameId;
+}
+
+// Global cleanup function
+function cleanupAllAnimations() {
+    // Clear all tracked timeouts
+    activeTimeouts.forEach(id => clearTimeout(id));
+    activeTimeouts.clear();
+    
+    // Clear all tracked intervals
+    activeIntervals.forEach(id => clearInterval(id));
+    activeIntervals.clear();
+    
+    // Cancel all tracked animation frames
+    activeAnimationFrames.forEach(id => cancelAnimationFrame(id));
+    activeAnimationFrames.clear();
+}
 
 // === INITIALIZATION ===
 document.addEventListener('DOMContentLoaded', function() {
+    // Reset all buttons to original state first
+    resetAllButtonsToOriginalState();
+    
     // Initialize background music
     initializeBackgroundMusic();
     
-    // Load saved sound preference
-    soundEnabled = localStorage.getItem('soundEnabled') === 'true';
+    // Load saved sound preference (but default to true now)
+    const savedSoundPreference = localStorage.getItem('soundEnabled');
+    soundEnabled = savedSoundPreference !== null ? savedSoundPreference === 'true' : true;
     updateSoundToggle();
+    
+    // Try to autoplay music
+    if (soundEnabled) {
+        // Small delay to ensure audio is loaded
+        setTimeout(() => {
+            playBackgroundMusic();
+        }, 500);
+    }
     
     // Setup keyboard navigation
     setupKeyboardNavigation();
@@ -32,12 +318,59 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup evasive start button
     setupEvasiveStartButton();
     
+    // Initialize interactive snowflakes
+    setTimeout(() => {
+        initializeInteractiveSnowflakes();
+    }, 1000);
+    
     // Ensure we start on the correct screen
     showScreen('startScreen');
 });
 
+// === BUTTON STATE RESET ===
+function resetAllButtonsToOriginalState() {
+    // Reset all buttons to clean state
+    const allButtons = document.querySelectorAll('button');
+    allButtons.forEach(button => {
+        // Clear all inline styles
+        button.style.cssText = '';
+        
+        // Remove evasive-mode class but preserve evasive-start-btn and evasive-last-btn classes
+        button.classList.remove('evasive-mode');
+        
+        // Reset positioning only for buttons that have evasive-mode
+        button.style.position = '';
+        button.style.left = '';
+        button.style.top = '';
+        button.style.transform = '';
+        button.style.boxShadow = '';
+        
+        // Enable all buttons initially
+        button.disabled = false;
+    });
+    
+    // Remove any placeholder elements that might have persisted
+    const placeholders = document.querySelectorAll('.evasive-start-placeholder, .evasive-last-placeholder');
+    placeholders.forEach(placeholder => placeholder.remove());
+    
+    // Specifically reset answer buttons to their original onclick handlers
+    const okayBtn = document.querySelector('.okay-btn');
+    const noBtn = document.querySelector('.no-btn');
+    if (okayBtn) {
+        okayBtn.onclick = function() { selectAnswer('okay'); };
+        okayBtn.setAttribute('onclick', "selectAnswer('okay')");
+    }
+    if (noBtn) {
+        noBtn.onclick = function() { selectAnswer('no'); };
+        noBtn.setAttribute('onclick', "selectAnswer('no')");
+    }
+}
+
 // === SCREEN MANAGEMENT ===
 function showScreen(screenId) {
+    // Clean up all animations and effects when changing screens
+    cleanupAllAnimations();
+    
     // Clean up any evasive last question button before switching screens
     if (screenId !== 'questionsScreen') {
         const evasiveLastButton = document.querySelector('#questionsScreen .evasive-last-btn');
@@ -46,13 +379,44 @@ function showScreen(screenId) {
         }
     }
     
-    // Hide all screens
-    document.querySelectorAll('.screen').forEach(screen => {
-        screen.classList.remove('active');
-    });
+    // Get current active screen for transition
+    const currentScreen = document.querySelector('.screen.active');
+    const targetScreen = document.getElementById(screenId);
     
-    // Show target screen
-    document.getElementById(screenId).classList.add('active');
+    if (currentScreen && currentScreen !== targetScreen) {
+        // Add fade out animation to current screen
+        currentScreen.classList.add('fadeOut');
+        
+        // After fade out completes, hide current and show target
+        setTimeout(() => {
+            currentScreen.classList.remove('active', 'fadeOut');
+            targetScreen.classList.add('active');
+            
+            // Add fade in animation to target screen
+            setTimeout(() => {
+                targetScreen.classList.add('fadeIn');
+                
+                // Remove animation class after completion
+                setTimeout(() => {
+                    targetScreen.classList.remove('fadeIn');
+                }, 400);
+            }, 50);
+            
+        }, 300);
+    } else {
+        // No current screen or same screen - simple transition
+        document.querySelectorAll('.screen').forEach(screen => {
+            screen.classList.remove('active');
+        });
+        
+        targetScreen.classList.add('active');
+        targetScreen.classList.add('fadeIn');
+        
+        // Remove animation class after completion
+        setTimeout(() => {
+            targetScreen.classList.remove('fadeIn');
+        }, 400);
+    }
     
     // Focus management for accessibility
     setTimeout(() => {
@@ -61,7 +425,7 @@ function showScreen(screenId) {
         if (firstFocusable) {
             firstFocusable.focus();
         }
-    }, 100);
+    }, 400);
 }
 
 // === QUIZ LOGIC ===
@@ -80,12 +444,38 @@ function loadQuestion() {
     const progressText = document.getElementById('progressText');
     progressText.textContent = `Question ${currentQuestionIndex + 1} of ${QUESTIONS.length}`;
     
-    // Update progress bar
+    // Update progress bar with animations
     const progressFill = document.getElementById('progressFill');
     const progressPercent = ((currentQuestionIndex + 1) / QUESTIONS.length) * 100;
+    
+    // Add glow animation
+    progressFill.classList.add('progressGlow');
+    
+    // Animate width change
     progressFill.style.width = `${progressPercent}%`;
     
-    // Update question text
+    // Add shimmer effect overlay if it doesn't exist
+    if (!progressFill.querySelector('.shimmer')) {
+        const shimmer = document.createElement('div');
+        shimmer.classList.add('shimmer');
+        progressFill.appendChild(shimmer);
+    }
+    
+    // Trigger shimmer animation
+    const shimmer = progressFill.querySelector('.shimmer');
+    if (shimmer) {
+        shimmer.style.animation = 'none';
+        setTimeout(() => {
+            shimmer.style.animation = 'shimmer 1s ease-out';
+        }, 100);
+    }
+    
+    // Remove glow after animation
+    setTimeout(() => {
+        progressFill.classList.remove('progressGlow');
+    }, 1000);
+    
+    // Update question text immediately
     const questionText = document.getElementById('questionText');
     questionText.textContent = QUESTIONS[currentQuestionIndex];
     
@@ -96,7 +486,17 @@ function loadQuestion() {
     backBtn.disabled = currentQuestionIndex === 0;
     nextBtn.disabled = !answers[currentQuestionIndex];
     
-    // Reset balance to current state
+    // Recalculate balance based on all previous answers
+    balanceTilt = 0;
+    for (let i = 0; i < answers.length; i++) {
+        if (answers[i] === 'okay') {
+            balanceTilt -= 1;
+        } else if (answers[i] === 'no') {
+            balanceTilt += 1;
+        }
+    }
+    
+    // Update balance visual
     updateBalanceVisual();
     
     // Setup evasive behavior for No button on last question ONLY
@@ -166,13 +566,9 @@ function cleanupEvasiveStartButton() {
     setupEvasiveStartButton();
 }
 
+// === ANSWER SELECTION ===
 function selectAnswer(answer) {
     playSound();
-    
-    // Prevent multiple rapid clicks on the same question
-    if (answers[currentQuestionIndex] === answer) {
-        return;
-    }
     
     // If there was a previous answer, revert its balance effect
     const previousAnswer = answers[currentQuestionIndex];
@@ -218,14 +614,6 @@ function nextQuestion() {
 
 function previousQuestion() {
     if (currentQuestionIndex > 0) {
-        // Revert balance tilt for the current answer we're leaving
-        const currentAnswer = answers[currentQuestionIndex];
-        if (currentAnswer === 'okay') {
-            balanceTilt += 1;
-        } else if (currentAnswer === 'no') {
-            balanceTilt -= 1;
-        }
-        
         currentQuestionIndex--;
         loadQuestion();
     }
@@ -352,10 +740,19 @@ function playBackgroundMusic() {
     
     try {
         backgroundMusic.play().catch(function(error) {
-            // If autoplay is blocked, we'll try again on next user interaction
+            // If autoplay is blocked, show a subtle notification
+            console.log('Autoplay blocked - music will start on user interaction');
+            // Try again on any user interaction
+            document.addEventListener('click', function tryAgain() {
+                if (soundEnabled) {
+                    backgroundMusic.play().catch(() => {});
+                    document.removeEventListener('click', tryAgain);
+                }
+            }, { once: true });
         });
     } catch (error) {
         // Handle playback errors silently
+        console.log('Audio playback error:', error);
     }
 }
 
