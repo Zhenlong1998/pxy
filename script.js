@@ -3,13 +3,28 @@ const QUESTIONS = [
   "如果我掉进河里，你会跳下去救吗？",
   "要不要一起吃饭？（你买单 😏）",
   "要不要一起减肥？我指导你呗",
-  "最后一次机会，你会珍惜吗？",
+  "如果真的最后一次，你会珍惜吗？",
   "分手后还能当朋友吗？"
 ];
 
 const resultImageUrl = "./d5387bc40d.gif";
 const bgmUrl = "./bgm.mp3";
 let backgroundMusic = null;
+
+// Romantic Chinese phrases for floating text background
+const ROMANTIC_PHRASES = [
+    "想你 💕", "想见你 🥺", "好想你 💖", "爱你 ❤️", "喜欢 😍",
+    "想念 💭", "思念 🌙", "牵挂 💝", "陪伴 👫", "守护 🛡️",
+    "心动 💗", "心跳 💓", "心意 💌", "真心 ❤️‍🔥", "用心 💘",
+    "温柔 🌸", "甜蜜 🍯", "浪漫 🌹", "美好 ✨", "幸福 😊",
+    "永远 ♾️", "一生 👰‍♀️", "一世 💒", "一辈子 🤝", "此生 🌟",
+    "缘分 🧵", "命运 🎭", "注定 💫", "天意 🙏", "心有灵犀 💞",
+    "月亮 🌙", "星星 ⭐", "花朵 🌺", "春天 🌷", "阳光 ☀️",
+    "梦里 😴", "梦中 💤", "梦境 🌈", "美梦 🦄", "甜梦 🧸",
+    "等你 ⏰", "等待 ⌛", "盼望 🤗", "期待 🎁", "希望 🌠",
+    "珍惜 💎", "呵护 🤲", "宠爱 👑", "疼爱 🥰", "关怀 🫶"
+];
+let floatingTextInterval = null;
 
 // === GAME STATE ===
 let currentQuestionIndex = 0;
@@ -259,6 +274,80 @@ function respawnSnowflake() {
     });
 }
 
+// === FLOATING ROMANTIC TEXT ===
+function initializeFloatingText() {
+    // Stop any existing floating text first to prevent duplicates
+    stopFloatingText();
+    
+    // Start spawning floating text periodically
+    floatingTextInterval = setTrackedInterval(() => {
+        createFloatingText();
+    }, 3000 + Math.random() * 2000); // Random interval between 2-5 seconds
+    
+    // Create initial text immediately
+    setTimeout(() => {
+        createFloatingText();
+    }, 1000);
+}
+
+function createFloatingText() {
+    const container = document.querySelector('.floating-text-container');
+    if (!container) return;
+    
+    // Select random phrase
+    const phrase = ROMANTIC_PHRASES[Math.floor(Math.random() * ROMANTIC_PHRASES.length)];
+    
+    // Create text element
+    const textElement = document.createElement('div');
+    textElement.textContent = phrase;
+    textElement.classList.add('floating-text');
+    
+    // Random color theme
+    const themes = ['pink', 'blue', 'gold', 'purple'];
+    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+    textElement.classList.add(randomTheme);
+    
+    // Random position (horizontal)
+    const leftPosition = Math.random() * 80 + 10; // 10% to 90%
+    
+    // Random font size
+    const fontSize = Math.random() * 20 + 16; // 16px to 36px
+    
+    // Random animation duration
+    const duration = Math.random() * 4 + 6; // 6 to 10 seconds
+    
+    // Apply styles
+    textElement.style.cssText = `
+        left: ${leftPosition}%;
+        top: calc(100vh + 50px);
+        font-size: ${fontSize}px;
+        animation-duration: ${duration}s;
+    `;
+    
+    // Add to container
+    container.appendChild(textElement);
+    
+    // Remove element after animation completes
+    setTimeout(() => {
+        if (textElement.parentNode) {
+            textElement.parentNode.removeChild(textElement);
+        }
+    }, duration * 1000);
+}
+
+function stopFloatingText() {
+    if (floatingTextInterval) {
+        clearInterval(floatingTextInterval);
+        floatingTextInterval = null;
+    }
+    
+    // Clear existing floating text
+    const container = document.querySelector('.floating-text-container');
+    if (container) {
+        container.innerHTML = '';
+    }
+}
+
 // Enhanced interval with tracking
 function setTrackedInterval(callback, delay) {
     const intervalId = setInterval(callback, delay);
@@ -289,6 +378,9 @@ function cleanupAllAnimations() {
     // Cancel all tracked animation frames
     activeAnimationFrames.forEach(id => cancelAnimationFrame(id));
     activeAnimationFrames.clear();
+    
+    // Stop floating text
+    stopFloatingText();
 }
 
 // === INITIALIZATION ===
@@ -322,6 +414,11 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         initializeInteractiveSnowflakes();
     }, 1000);
+    
+    // Initialize floating romantic text
+    setTimeout(() => {
+        initializeFloatingText();
+    }, 2000);
     
     // Ensure we start on the correct screen
     showScreen('startScreen');
@@ -425,6 +522,11 @@ function showScreen(screenId) {
         if (firstFocusable) {
             firstFocusable.focus();
         }
+        
+        // Restart floating text after screen transition
+        setTimeout(() => {
+            initializeFloatingText();
+        }, 1000);
     }, 400);
 }
 
